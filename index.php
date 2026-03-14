@@ -5,29 +5,39 @@ if (!empty($_SESSION['user_id'])) {
     header('Location: ' . $redirect);
     exit;
 }
+// Init i18n without DB (not logged in yet)
+i18n_init();
+$lang = currentLang(); $dir = langDir();
 ?><!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="<?= $lang ?>" dir="<?= $dir ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FitTrack AI - تتبع سعراتك</title>
+    <title><?= t('app_name') ?> - <?= t('app_tagline') ?></title>
     <link rel="stylesheet" href="assets/css/style.css">
+    <?= jsTranslations() ?>
 </head>
 <body>
 <div class="auth-wrapper">
     <div class="auth-card">
+        <!-- Language switcher on login page -->
+        <div style="text-align:<?= isRtl()?'left':'right' ?>;margin-bottom:12px">
+            <a href="?lang=ar" style="text-decoration:none;padding:4px 8px;border-radius:8px;font-size:.82rem;<?= $lang==='ar'?'background:var(--primary);color:#fff':'color:#666' ?>">🇸🇦</a>
+            <a href="?lang=en" style="text-decoration:none;padding:4px 8px;border-radius:8px;font-size:.82rem;<?= $lang==='en'?'background:var(--primary);color:#fff':'color:#666' ?>">🇬🇧</a>
+            <a href="?lang=de" style="text-decoration:none;padding:4px 8px;border-radius:8px;font-size:.82rem;<?= $lang==='de'?'background:var(--primary);color:#fff':'color:#666' ?>">🇩🇪</a>
+        </div>
         <div class="auth-logo">
             <div class="logo-icon">🥗</div>
-            <h1>FitTrack AI</h1>
-            <p>تتبع سعراتك وحقق هدفك</p>
+            <h1><?= t('app_name') ?></h1>
+            <p><?= t('app_tagline') ?></p>
         </div>
 
         <div id="alert-box"></div>
 
         <!-- Tabs -->
         <div class="auth-tabs">
-            <div class="auth-tab active" onclick="switchTab('login')">تسجيل الدخول</div>
-            <div class="auth-tab" onclick="switchTab('register')">حساب جديد</div>
+            <div class="auth-tab active" onclick="switchTab('login')"><?= t('login') ?></div>
+            <div class="auth-tab" onclick="switchTab('register')"><?= t('new_account') ?></div>
         </div>
 
         <!-- Login Form -->

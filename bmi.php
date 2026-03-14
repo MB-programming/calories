@@ -3,26 +3,20 @@ require_once 'config/config.php';
 if (empty($_SESSION['user_id'])) { header('Location: index.php'); exit; }
 require_once 'config/database.php';
 $db   = Database::getInstance();
+i18n_init($db);
 $user = $db->fetch("SELECT * FROM users WHERE id=?", [$_SESSION['user_id']]);
+$lang = currentLang(); $dir = langDir();
 ?><!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="<?= $lang ?>" dir="<?= $dir ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BMI - FitTrack AI</title>
+    <title><?= t('bmi_title') ?> - <?= t('app_name') ?></title>
     <link rel="stylesheet" href="assets/css/style.css">
+    <?= jsTranslations() ?>
 </head>
 <body>
-<nav class="navbar">
-    <a class="navbar-brand" href="dashboard.php">🥗 <span>FitTrack AI</span></a>
-    <ul class="nav-links">
-        <li><a href="dashboard.php">الرئيسية</a></li>
-        <li><a href="bmi.php" class="active">BMI</a></li>
-        <li><a href="goals.php">الهدف</a></li>
-        <li><a href="tracker.php">التتبع</a></li>
-        <li><a href="#" onclick="logout()">خروج</a></li>
-    </ul>
-</nav>
+<?php include 'includes/navbar.php'; ?>
 
 <div class="container">
     <h1 class="page-title">💪 حساب BMI والسعرات</h1>
@@ -213,9 +207,6 @@ async function calcBmi(e) {
     toast('تم الحساب بنجاح', 'success');
 }
 
-function logout() {
-    api('api/auth.php', {action:'logout'}).then(r => { if(r.success) window.location.href = r.redirect; });
-}
 </script>
 </body>
 </html>

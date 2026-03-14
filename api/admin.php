@@ -19,6 +19,7 @@ switch ($action) {
 
         $lastBmi   = $db->fetch("SELECT * FROM bmi_records WHERE user_id=? ORDER BY recorded_at DESC LIMIT 1", [$id]);
         $goal      = $db->fetch("SELECT * FROM goals WHERE user_id=? AND status='active' ORDER BY created_at DESC LIMIT 1", [$id]);
+        $prefs     = $db->fetch("SELECT * FROM user_preferences WHERE user_id=?", [$id]);
         $foodCount = $db->fetch("SELECT COUNT(*) as c FROM food_logs WHERE user_id=?", [$id])['c'];
 
         echo json_encode([
@@ -26,7 +27,40 @@ switch ($action) {
             'user'       => $user,
             'last_bmi'   => $lastBmi,
             'goal'       => $goal,
+            'prefs'      => $prefs,
             'food_count' => $foodCount,
+        ]);
+        break;
+
+    case 'save_ai_settings':
+        $provider   = $_POST['ai_provider']  ?? 'gemini';
+        $model      = $_POST['ai_model']     ?? 'gemini-2.0-flash';
+        $geminiKey  = trim($_POST['gemini_key']  ?? '');
+        $groqKey    = trim($_POST['groq_key']    ?? '');
+        $openaiKey  = trim($_POST['openai_key']  ?? '');
+        $claudeKey  = trim($_POST['claude_key']  ?? '');
+        $ollamaUrl  = trim($_POST['ollama_url']  ?? 'http://localhost:11434');
+
+        $db->setSetting('ai_provider',  $provider);
+        $db->setSetting('ai_model',     $model);
+        if ($geminiKey) $db->setSetting('gemini_key',  $geminiKey);
+        if ($groqKey)   $db->setSetting('groq_key',    $groqKey);
+        if ($openaiKey) $db->setSetting('openai_key',  $openaiKey);
+        if ($claudeKey) $db->setSetting('claude_key',  $claudeKey);
+        $db->setSetting('ollama_url',   $ollamaUrl);
+
+        echo json_encode(['success' => true, 'provider' => $provider, 'model' => $model]);
+        break;
+
+    case 'test_ai':
+        $result = AIProvider::test($db);
+        echo json_encode([
+            'success'  => true,
+            'ok'       => $result['success'],
+            'provider' => $result['provider'],
+            'model'    => $result['model'],
+            'response' => $result['response'],
+            'error'    => $result['success'] ? null : 'No response from AI provider. Check API key.',
         ]);
         break;
 

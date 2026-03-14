@@ -3,6 +3,7 @@ require_once 'config/config.php';
 if (empty($_SESSION['user_id'])) { header('Location: index.php'); exit; }
 require_once 'config/database.php';
 $db   = Database::getInstance();
+i18n_init($db);
 $user = $db->fetch("SELECT * FROM users WHERE id=?", [$_SESSION['user_id']]);
 $lastBmi = $db->fetch("SELECT * FROM bmi_records WHERE user_id=? ORDER BY recorded_at DESC LIMIT 1", [$_SESSION['user_id']]);
 $activeGoal = $db->fetch("SELECT * FROM goals WHERE user_id=? AND status='active' ORDER BY created_at DESC LIMIT 1", [$_SESSION['user_id']]);
@@ -12,29 +13,27 @@ $weekData = $db->fetchAll(
      WHERE user_id=? AND summary_date >= date('now','-6 days') ORDER BY summary_date",
     [$_SESSION['user_id']]
 );
-$goalAr = ['lose' => 'إنقاص الوزن', 'maintain' => 'ثبات الوزن', 'gain' => 'زيادة الوزن'];
+$prefs = $db->fetch("SELECT * FROM user_preferences WHERE user_id=?", [$_SESSION['user_id']]);
+$gymDays = json_decode($prefs['gym_days'] ?? '[]', true) ?? [];
+$todayKey = strtolower(date('D'));
+$gymToday = in_array($todayKey, $gymDays);
+$goalAr = ['lose' => tr('goal_lose'), 'maintain' => tr('goal_maintain'), 'gain' => tr('goal_gain')];
 $todayCal   = (float)($todaySummary['total_calories'] ?? 0);
 $targetCal  = (int)($activeGoal['target_calories'] ?? 2000);
 $pct        = $targetCal > 0 ? min(round(($todayCal / $targetCal) * 100), 100) : 0;
+$lang       = currentLang();
+$dir        = langDir();
 ?><!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="<?= $lang ?>" dir="<?= $dir ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة التحكم - FitTrack AI</title>
+    <title><?= t('nav_home') ?> - <?= t('app_name') ?></title>
     <link rel="stylesheet" href="assets/css/style.css">
+    <?= jsTranslations() ?>
 </head>
 <body>
-<nav class="navbar">
-    <a class="navbar-brand" href="dashboard.php">🥗 <span>FitTrack AI</span></a>
-    <ul class="nav-links">
-        <li><a href="dashboard.php" class="active">الرئيسية</a></li>
-        <li><a href="bmi.php">BMI</a></li>
-        <li><a href="goals.php">الهدف</a></li>
-        <li><a href="tracker.php">التتبع</a></li>
-        <li><a href="#" onclick="logout()">خروج</a></li>
-    </ul>
-</nav>
+<?php include 'includes/navbar.php'; ?>
 
 <div class="container">
     <!-- Greeting -->
@@ -45,13 +44,18 @@ $pct        = $targetCal > 0 ? min(round(($todayCal / $targetCal) * 100), 100) :
                 <p style="opacity:.9;font-size:.95rem"><?= date('l، d F Y') ?></p>
                 <?php if ($activeGoal): ?>
                 <p style="opacity:.85;font-size:.85rem;margin-top:4px">
-                    🎯 هدفك: <?= $goalAr[$activeGoal['goal_type']] ?? '' ?>
-                    <?= $activeGoal['target_weight'] ? " | الوزن المستهدف: {$activeGoal['target_weight']}كجم" : '' ?>
+                    🎯 <?= t('current_goal') ?>: <?= $goalAr[$activeGoal['goal_type']] ?? '' ?>
+                    <?= $activeGoal['target_weight'] ? " | " . t('target_weight') . ": {$activeGoal['target_weight']}kg" : '' ?>
+                </p>
+                <?php endif; ?>
+                <?php if ($gymToday): ?>
+                <p style="opacity:.9;font-size:.9rem;margin-top:6px;background:rgba(255,255,255,.15);padding:4px 12px;border-radius:12px;display:inline-block">
+                    <?= t('gym_today') ?> ⏰ <?= $prefs['gym_time'] ?? '' ?> (<?= $prefs['gym_duration'] ?? 60 ?> min)
                 </p>
                 <?php endif; ?>
             </div>
             <a href="tracker.php" class="btn" style="background:rgba(255,255,255,.25);color:#fff;border:2px solid rgba(255,255,255,.5)">
-                ➕ سجّل وجبة
+                ➕ <?= t('add_food') ?>
             </a>
         </div>
     </div>
@@ -187,10 +191,5 @@ $pct        = $targetCal > 0 ? min(round(($todayCal / $targetCal) * 100), 100) :
 </div>
 
 <script src="assets/js/app.js"></script>
-<script>
-function logout() {
-    api('api/auth.php', {action:'logout'}).then(r => { if(r.success) window.location.href = r.redirect; });
-}
-</script>
 </body>
 </html>

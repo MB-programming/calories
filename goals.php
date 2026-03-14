@@ -3,28 +3,22 @@ require_once 'config/config.php';
 if (empty($_SESSION['user_id'])) { header('Location: index.php'); exit; }
 require_once 'config/database.php';
 $db   = Database::getInstance();
+i18n_init($db);
 $user = $db->fetch("SELECT * FROM users WHERE id=?", [$_SESSION['user_id']]);
 $lastBmi = $db->fetch("SELECT * FROM bmi_records WHERE user_id=? ORDER BY recorded_at DESC LIMIT 1", [$_SESSION['user_id']]);
 $activeGoal = $db->fetch("SELECT * FROM goals WHERE user_id=? AND status='active' ORDER BY created_at DESC LIMIT 1", [$_SESSION['user_id']]);
+$lang = currentLang(); $dir = langDir();
 ?><!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="<?= $lang ?>" dir="<?= $dir ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>الهدف - FitTrack AI</title>
+    <title><?= t('goals_title') ?> - <?= t('app_name') ?></title>
     <link rel="stylesheet" href="assets/css/style.css">
+    <?= jsTranslations() ?>
 </head>
 <body>
-<nav class="navbar">
-    <a class="navbar-brand" href="dashboard.php">🥗 <span>FitTrack AI</span></a>
-    <ul class="nav-links">
-        <li><a href="dashboard.php">الرئيسية</a></li>
-        <li><a href="bmi.php">BMI</a></li>
-        <li><a href="goals.php" class="active">الهدف</a></li>
-        <li><a href="tracker.php">التتبع</a></li>
-        <li><a href="#" onclick="logout()">خروج</a></li>
-    </ul>
-</nav>
+<?php include 'includes/navbar.php'; ?>
 
 <div class="container">
     <h1 class="page-title">🎯 تحديد الهدف</h1>
@@ -255,9 +249,6 @@ async function saveGoal(e) {
     }
 }
 
-function logout() {
-    api('api/auth.php', {action:'logout'}).then(r => { if(r.success) window.location.href = r.redirect; });
-}
 </script>
 </body>
 </html>

@@ -1,25 +1,22 @@
 <?php
 require_once 'config/config.php';
 if (empty($_SESSION['user_id'])) { header('Location: index.php'); exit; }
+require_once 'config/database.php';
+$db    = Database::getInstance();
+i18n_init($db);
+$prefs = $db->fetch("SELECT * FROM user_preferences WHERE user_id=?", [$_SESSION['user_id']]);
+$lang  = currentLang(); $dir = langDir();
 ?><!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="<?= $lang ?>" dir="<?= $dir ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تتبع السعرات - FitTrack AI</title>
+    <title><?= t('tracker_title') ?> - <?= t('app_name') ?></title>
     <link rel="stylesheet" href="assets/css/style.css">
+    <?= jsTranslations() ?>
 </head>
 <body>
-<nav class="navbar">
-    <a class="navbar-brand" href="dashboard.php">🥗 <span>FitTrack AI</span></a>
-    <ul class="nav-links">
-        <li><a href="dashboard.php">الرئيسية</a></li>
-        <li><a href="bmi.php">BMI</a></li>
-        <li><a href="goals.php">الهدف</a></li>
-        <li><a href="tracker.php" class="active">التتبع</a></li>
-        <li><a href="#" onclick="logout()">خروج</a></li>
-    </ul>
-</nav>
+<?php include 'includes/navbar.php'; ?>
 
 <div class="container">
     <!-- Header + Date Picker -->
@@ -80,11 +77,12 @@ if (empty($_SESSION['user_id'])) { header('Location: index.php'); exit; }
 
                 <!-- Meal Type Tabs -->
                 <div class="meal-tabs">
-                    <div class="meal-tab active" onclick="setMeal('breakfast', this)">🌅 فطار</div>
-                    <div class="meal-tab" onclick="setMeal('lunch', this)">☀️ غدا</div>
-                    <div class="meal-tab" onclick="setMeal('dinner', this)">🌙 عشا</div>
-                    <div class="meal-tab" onclick="setMeal('snack', this)">🍎 سناك</div>
+                    <div class="meal-tab active" onclick="setMeal('breakfast', this)"><?= t('meal_breakfast') ?></div>
+                    <div class="meal-tab" onclick="setMeal('lunch', this)"><?= t('meal_lunch') ?></div>
+                    <div class="meal-tab" onclick="setMeal('dinner', this)"><?= t('meal_dinner') ?></div>
+                    <div class="meal-tab" onclick="setMeal('snack', this)"><?= t('meal_snack') ?></div>
                 </div>
+                <div id="meal-time-hint" style="font-size:.82rem;color:var(--primary);margin-bottom:10px"></div>
                 <input type="hidden" id="meal-type" value="breakfast">
 
                 <!-- Photo Upload -->
@@ -213,6 +211,7 @@ function setMeal(type, el) {
     document.getElementById('meal-type').value = type;
     document.querySelectorAll('.meal-tab').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
+    if (typeof updateMealTimeHint === 'function') updateMealTimeHint(type);
 }
 
 function changeDate(days) {
@@ -439,9 +438,31 @@ async function sendChat() {
 
 document.getElementById('chat-input').addEventListener('keydown', e => { if (e.key === 'Enter') sendChat(); });
 
-function logout() {
-    api('api/auth.php', {action:'logout'}).then(r => { if(r.success) window.location.href = r.redirect; });
+// Show meal time hints from user preferences
+const mealTimes = {
+    breakfast: '<?= $prefs['breakfast_time'] ?? '08:00' ?>',
+    lunch:     '<?= $prefs['lunch_time']     ?? '13:00' ?>',
+    snack:     '<?= $prefs['snack_time']     ?? '16:00' ?>',
+    dinner:    '<?= $prefs['dinner_time']    ?? '19:00' ?>',
+};
+function updateMealTimeHint(meal) {
+    const t = mealTimes[meal];
+    const hint = document.getElementById('meal-time-hint');
+    if (hint && t) hint.textContent = '⏰ ' + t;
 }
+// Auto-select current meal based on time
+(function() {
+    const h = new Date().getHours();
+    let meal = 'breakfast';
+    if (h >= 11 && h < 15) meal = 'lunch';
+    else if (h >= 15 && h < 18) meal = 'snack';
+    else if (h >= 18) meal = 'dinner';
+    document.querySelectorAll('.meal-tab').forEach(t => t.classList.remove('active'));
+    const tabs = {'breakfast':0,'lunch':1,'dinner':2,'snack':3};
+    document.querySelectorAll('.meal-tab')[tabs[meal]]?.classList.add('active');
+    currentMeal = meal;
+    updateMealTimeHint(meal);
+})();
 
 // Init
 loadDay();
