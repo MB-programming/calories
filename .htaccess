@@ -1,0 +1,26 @@
+Options -Indexes
+
+# Protect sensitive files
+<FilesMatch "\.(db|sqlite|env)$">
+    Require all denied
+</FilesMatch>
+
+# Protect database directory
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Block direct database access
+    RewriteRule ^database/ - [F,L]
+
+    # Optional: enable pretty URLs
+    # RewriteCond %{REQUEST_FILENAME} !-f
+    # RewriteCond %{REQUEST_FILENAME} !-d
+    # RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+# PHP settings
+<IfModule mod_php.c>
+    php_value upload_max_filesize 5M
+    php_value post_max_size 6M
+    php_value max_execution_time 30
+</IfModule>
